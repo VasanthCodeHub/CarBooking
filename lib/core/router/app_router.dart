@@ -6,6 +6,9 @@ import '../../data/models/user_role.dart';
 import '../../features/auth/view/login_screen.dart';
 import '../../features/auth/view/splash_screen.dart';
 import '../../features/auth/viewmodel/auth_viewmodel.dart';
+import '../../features/customer/view/book_ride_screen.dart';
+import '../../features/customer/view/customer_shell.dart';
+import '../../features/customer/view/trip_detail_screen.dart';
 import '../theme/app_colors.dart';
 
 /// Bridges the Riverpod auth state to go_router's [GoRouter.refreshListenable]
@@ -41,11 +44,22 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      // NOTE: these three are temporary placeholders replaced in Layers 3–5.
       GoRoute(
         path: '/customer',
-        builder: (_, __) => const _RoleHomePlaceholder(role: UserRole.customer),
+        builder: (_, __) => const CustomerShell(),
+        routes: [
+          GoRoute(
+            path: 'book',
+            builder: (_, __) => const BookRideScreen(),
+          ),
+          GoRoute(
+            path: 'trip/:id',
+            builder: (_, state) =>
+                TripDetailScreen(bookingId: state.pathParameters['id']!),
+          ),
+        ],
       ),
+      // NOTE: these two are temporary placeholders replaced in Layers 4–5.
       GoRoute(
         path: '/driver',
         builder: (_, __) => const _RoleHomePlaceholder(role: UserRole.driver),
