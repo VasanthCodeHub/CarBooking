@@ -35,6 +35,19 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # State management (MVVM ViewModels)
+  flutter_riverpod: ^2.5.1
+  # Declarative, role-based routing
+  go_router: ^14.6.2
+  # Typography for a polished UI
+  google_fonts: ^6.2.1
+  # Date / time / currency formatting
+  intl: ^0.19.0
+  # Lightweight entrance animations for a "cool" UI
+  flutter_animate: ^4.5.0
+  # HTTP client — ready for the Python API later
+  dio: ^5.7.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
