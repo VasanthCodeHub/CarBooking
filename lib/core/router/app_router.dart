@@ -9,6 +9,8 @@ import '../../features/auth/viewmodel/auth_viewmodel.dart';
 import '../../features/customer/view/book_ride_screen.dart';
 import '../../features/customer/view/customer_shell.dart';
 import '../../features/customer/view/trip_detail_screen.dart';
+import '../../features/driver/view/driver_ride_detail_screen.dart';
+import '../../features/driver/view/driver_shell.dart';
 import '../theme/app_colors.dart';
 
 /// Bridges the Riverpod auth state to go_router's [GoRouter.refreshListenable]
@@ -59,11 +61,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      // NOTE: these two are temporary placeholders replaced in Layers 4–5.
       GoRoute(
         path: '/driver',
-        builder: (_, __) => const _RoleHomePlaceholder(role: UserRole.driver),
+        builder: (_, __) => const DriverShell(),
+        routes: [
+          GoRoute(
+            path: 'ride/:id',
+            builder: (_, state) =>
+                DriverRideDetailScreen(bookingId: state.pathParameters['id']!),
+          ),
+        ],
       ),
+      // NOTE: this one is a temporary placeholder replaced in Layer 5.
       GoRoute(
         path: '/admin',
         builder: (_, __) => const _RoleHomePlaceholder(role: UserRole.admin),
