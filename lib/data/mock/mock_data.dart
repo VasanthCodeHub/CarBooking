@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'package:latlong2/latlong.dart';
 
 import '../../core/utils/geo.dart';
 import '../models/app_user.dart';
@@ -7,10 +7,15 @@ import '../models/driver.dart';
 import '../models/user_role.dart';
 import '../models/vehicle.dart';
 
-/// All seed data for the POC lives here. When the Python API is ready, the
-/// repositories stop reading from this file and hit the network instead.
+/// Seed data for the mock (driver/admin) flavors. The customer flavor reads
+/// from the Spring Boot API instead.
 class MockData {
   MockData._();
+
+  /// Maps the old normalized 0..1 layout onto a San-Francisco bounding box,
+  /// matching the backend's seed transform so coordinates line up.
+  static LatLng _ll(double x, double y) =>
+      LatLng(37.81 - y * 0.07, -122.46 + x * 0.07);
 
   // ---- Demo accounts ---------------------------------------------------
   // Any password works in the POC; pick the role on the login screen.
@@ -40,38 +45,38 @@ class MockData {
   ];
 
   // ---- Saved places ----------------------------------------------------
-  static const Place home = Place(
+  static final Place home = Place(
     label: 'Home',
     address: '120 Marina Blvd',
-    position: Offset(0.22, 0.30),
+    position: _ll(0.22, 0.30),
   );
-  static const Place office = Place(
+  static final Place office = Place(
     label: 'Office',
     address: '500 Howard St, Suite 12',
-    position: Offset(0.70, 0.66),
+    position: _ll(0.70, 0.66),
   );
-  static const Place airport = Place(
+  static final Place airport = Place(
     label: 'City Airport',
     address: 'Terminal B, Departures',
-    position: Offset(0.86, 0.18),
+    position: _ll(0.86, 0.18),
   );
-  static const Place mall = Place(
+  static final Place mall = Place(
     label: 'Grand Central Mall',
     address: '88 Market Square',
-    position: Offset(0.46, 0.50),
+    position: _ll(0.46, 0.50),
   );
-  static const Place hotel = Place(
+  static final Place hotel = Place(
     label: 'Hotel Belmore',
     address: '7 Riverside Walk',
-    position: Offset(0.34, 0.74),
+    position: _ll(0.34, 0.74),
   );
-  static const Place stadium = Place(
+  static final Place stadium = Place(
     label: 'North Stadium',
     address: 'Gate 4, North Stadium',
-    position: Offset(0.60, 0.22),
+    position: _ll(0.60, 0.22),
   );
 
-  static const List<Place> savedPlaces = [home, office, airport, mall, hotel, stadium];
+  static final List<Place> savedPlaces = [home, office, airport, mall, hotel, stadium];
 
   // ---- Fleet (5-6 drivers, matching the client's size) -----------------
   static final List<Driver> drivers = [
@@ -83,7 +88,7 @@ class MockData {
       completedTrips: 1284,
       zone: 'Downtown',
       status: DriverStatus.available,
-      position: const Offset(0.40, 0.42),
+      position: _ll(0.40, 0.42),
       vehicle: const Vehicle(
         make: 'Toyota',
         model: 'Camry',
@@ -100,7 +105,7 @@ class MockData {
       completedTrips: 970,
       zone: 'Marina',
       status: DriverStatus.available,
-      position: const Offset(0.26, 0.34),
+      position: _ll(0.26, 0.34),
       vehicle: const Vehicle(
         make: 'Hyundai',
         model: 'Sonata',
@@ -117,7 +122,7 @@ class MockData {
       completedTrips: 1543,
       zone: 'Airport',
       status: DriverStatus.onTrip,
-      position: const Offset(0.78, 0.30),
+      position: _ll(0.78, 0.30),
       vehicle: const Vehicle(
         make: 'Kia',
         model: 'Carnival',
@@ -134,7 +139,7 @@ class MockData {
       completedTrips: 642,
       zone: 'Uptown',
       status: DriverStatus.available,
-      position: const Offset(0.62, 0.58),
+      position: _ll(0.62, 0.58),
       vehicle: const Vehicle(
         make: 'Mercedes',
         model: 'E-Class',
@@ -151,7 +156,7 @@ class MockData {
       completedTrips: 388,
       zone: 'Riverside',
       status: DriverStatus.available,
-      position: const Offset(0.48, 0.72),
+      position: _ll(0.48, 0.72),
       vehicle: const Vehicle(
         make: 'Honda',
         model: 'Accord',
@@ -168,7 +173,7 @@ class MockData {
       completedTrips: 1102,
       zone: 'Downtown',
       status: DriverStatus.offline,
-      position: const Offset(0.55, 0.46),
+      position: _ll(0.55, 0.46),
       vehicle: const Vehicle(
         make: 'Tesla',
         model: 'Model 3',

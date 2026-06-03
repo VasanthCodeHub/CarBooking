@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_avatar.dart';
 import '../../../core/widgets/booking_card.dart';
 import '../../../core/widgets/mock_map.dart';
-import '../../../data/mock/mock_data.dart';
-import '../../../data/models/booking.dart';
 import '../../auth/viewmodel/auth_viewmodel.dart';
 import '../viewmodel/customer_bookings_viewmodel.dart';
 
@@ -52,21 +51,6 @@ class CustomerHomeScreen extends ConsumerWidget {
                   .animate()
                   .fadeIn()
                   .slideY(begin: 0.1, end: 0),
-              const SizedBox(height: 20),
-              Text('Saved places', style: context.sectionTitle),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 92,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: MockData.savedPlaces.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (_, i) => _PlaceChip(
-                    place: MockData.savedPlaces[i],
-                    onTap: () => context.push('/customer/book'),
-                  ),
-                ),
-              ),
               const SizedBox(height: 24),
               if (active.isNotEmpty) ...[
                 Row(
@@ -179,56 +163,6 @@ class _SearchCard extends StatelessWidget {
   }
 }
 
-class _PlaceChip extends StatelessWidget {
-  const _PlaceChip({required this.place, required this.onTap});
-  final Place place;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 120,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.line),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.place_rounded,
-                  size: 16, color: AppColors.primary),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(place.label,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 13)),
-                Text(place.address,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: AppColors.inkSoft, fontSize: 11)),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _EmptyActive extends StatelessWidget {
   const _EmptyActive({required this.onBook});
   final VoidCallback onBook;
@@ -245,9 +179,9 @@ class _EmptyActive extends StatelessWidget {
       child: Column(
         children: [
           const MockMap(height: 140, showRoute: false, drivers: [
-            MapDriver(position: Offset(0.3, 0.4)),
-            MapDriver(position: Offset(0.7, 0.6)),
-            MapDriver(position: Offset(0.55, 0.3)),
+            MapDriver(position: LatLng(37.789, -122.432)),
+            MapDriver(position: LatLng(37.768, -122.412)),
+            MapDriver(position: LatLng(37.794, -122.421)),
           ]),
           const SizedBox(height: 16),
           const Text('No active rides',

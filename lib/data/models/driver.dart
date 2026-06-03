@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../core/theme/app_colors.dart';
 import 'vehicle.dart';
@@ -33,7 +34,7 @@ class Driver {
   final int completedTrips;
   final String zone;
   final DriverStatus status;
-  final Offset position; // 0..1 normalized map coordinate
+  final LatLng position; // real-world coordinate
 
   const Driver({
     required this.id,
@@ -57,7 +58,7 @@ class Driver {
 
   Driver copyWith({
     DriverStatus? status,
-    Offset? position,
+    LatLng? position,
     int? completedTrips,
     double? rating,
   }) =>
@@ -87,9 +88,9 @@ class Driver {
           (s) => s.name == json['status'],
           orElse: () => DriverStatus.offline,
         ),
-        position: Offset(
-          (json['pos_x'] as num?)?.toDouble() ?? 0.5,
-          (json['pos_y'] as num?)?.toDouble() ?? 0.5,
+        position: LatLng(
+          (json['lat'] as num?)?.toDouble() ?? 0.0,
+          (json['lng'] as num?)?.toDouble() ?? 0.0,
         ),
       );
 }

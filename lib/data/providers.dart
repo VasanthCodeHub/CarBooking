@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'models/driver.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/booking_repository.dart';
 import 'repositories/driver_repository.dart';
@@ -18,4 +19,9 @@ final driverRepositoryProvider = Provider<DriverRepository>((ref) {
 
 final bookingRepositoryProvider = Provider<BookingRepository>((ref) {
   return MockBookingRepository(ref.watch(driverRepositoryProvider));
+});
+
+/// Current fleet, fetched once for map previews. Refresh by invalidating.
+final fleetProvider = FutureProvider<List<Driver>>((ref) {
+  return ref.watch(driverRepositoryProvider).getDrivers();
 });

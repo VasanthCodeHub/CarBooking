@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+// latlong2 also exports a `Path` type; hide it so dart:ui's Path wins.
+import 'package:latlong2/latlong.dart' hide Path;
 
 import '../theme/app_colors.dart';
 
 /// A driver marker drawn on the [MockMap].
 class MapDriver {
-  final Offset position; // normalized 0..1
+  final LatLng position;
   final Color color;
   final String? label;
   final bool highlighted;
@@ -19,9 +21,10 @@ class MapDriver {
   });
 }
 
-/// A stylized, dependency-free map used across the app to visualize pickups,
-/// drop-offs, routes and driver positions. Swap for Google Maps later without
-/// changing callers — they just pass normalized 0..1 coordinates.
+/// A stylized, dependency-free map used for inline previews (trip detail, fleet
+/// overview, etc). It takes real [LatLng] coordinates and projects them onto a
+/// fitted bounding box so the layout looks sensible without loading map tiles.
+/// For interactive picking we use a real [flutter_map] instead.
 class MockMap extends StatelessWidget {
   const MockMap({
     super.key,
@@ -35,8 +38,8 @@ class MockMap extends StatelessWidget {
     this.padding = const EdgeInsets.all(0),
   });
 
-  final Offset? pickup;
-  final Offset? dropoff;
+  final LatLng? pickup;
+  final LatLng? dropoff;
   final List<MapDriver> drivers;
 
   /// If set (0..1), draws a car travelling along the route at this progress.
@@ -77,19 +80,49 @@ class _MapPainter extends CustomPainter {
     required this.drivers,
     required this.routeProgress,
     required this.showRoute,
-  });
+  }) {
+    // Fit a bounding box around every point so the projection is stable.
+    final pts = <LatLng>[
+      if (pickup != null) pickup!,
+      if (dropoff != null) dropoff!,
+      ...drivers.map((d) => d.position),
+    ];
+    if (pts.isEmpty) {
+      _minLat = 0;
+      _maxLat = 1;
+      _minLng = 0;
+      _maxLng = 1;
+    } else {
+      _minLat = pts.map((p) => p.latitude).reduce(math.min);
+      _maxLat = pts.map((p) => p.latitude).reduce(math.max);
+      _minLng = pts.map((p) => p.longitude).reduce(math.min);
+      _maxLng = pts.map((p) => p.longitude).reduce(math.max);
+    }
+  }
 
-  final Offset? pickup;
-  final Offset? dropoff;
+  final LatLng? pickup;
+  final LatLng? dropoff;
   final List<MapDriver> drivers;
   final double? routeProgress;
   final bool showRoute;
 
-  Offset _p(Offset n, Size s) => Offset(n.dx * s.width, n.dy * s.height);
+  late final double _minLat, _maxLat, _minLng, _maxLng;
+  static const double _margin = 0.14; // keep points off the edges
+
+  /// Projects a real coordinate into screen space within the fitted box.
+  Offset _p(LatLng c, Size s) {
+    const eps = 1e-6;
+    final lngSpan = math.max(_maxLng - _minLng, eps);
+    final latSpan = math.max(_maxLat - _minLat, eps);
+    final fx = (_maxLng - _minLng) < eps ? 0.5 : (c.longitude - _minLng) / lngSpan;
+    final fy = (_maxLat - _minLat) < eps ? 0.5 : (_maxLat - c.latitude) / latSpan;
+    final x = (_margin + fx * (1 - 2 * _margin)) * s.width;
+    final y = (_margin + fy * (1 - 2 * _margin)) * s.height;
+    return Offset(x, y);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Background
     final bg = Paint()
       ..shader = const LinearGradient(
         colors: [Color(0xFFEAF0F8), Color(0xFFDCE6F2)],
@@ -148,7 +181,6 @@ class _MapPainter extends CustomPainter {
   }
 
   void _drawRoute(Canvas canvas, Size size, Offset a, Offset b) {
-    // An L-shaped route hugging the "roads" for a believable path.
     final path = Path()
       ..moveTo(a.dx, a.dy)
       ..lineTo(b.dx, a.dy)

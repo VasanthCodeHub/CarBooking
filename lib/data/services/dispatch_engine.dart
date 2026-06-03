@@ -20,12 +20,14 @@ class DispatchEngine {
   DispatchResult evaluate(Booking booking, List<Driver> fleet) {
     final eligible = fleet.where((d) => d.status == DriverStatus.available).toList();
 
+    const maxPickupKm = 12.0; // beyond this, proximity score hits zero
+
     final candidates = eligible.map((d) {
-      final dist = Geo.distance(d.position, booking.pickup.position);
+      final km = Geo.distanceKm(d.position, booking.pickup.position);
       final eta = Geo.etaMinutes(d.position, booking.pickup.position);
 
       // Proximity: nearest of the eligible set scores highest.
-      final proximityScore = (1 - Geo.clamp01(dist / 1.0)) * _wProximity;
+      final proximityScore = (1 - Geo.clamp01(km / maxPickupKm)) * _wProximity;
       final ratingScore = (d.rating / 5.0) * _wRating;
       final expScore = (Geo.clamp01(d.completedTrips / 1500)) * _wExperience;
       final exactMatch = d.vehicle.type == booking.vehicleType;
@@ -36,7 +38,7 @@ class DispatchEngine {
       final score = proximityScore + ratingScore + expScore + vehicleScore;
 
       final reasons = <String>[
-        '${eta.toStringAsFixed(0)} min away (${Geo.distanceKm(d.position, booking.pickup.position).toStringAsFixed(1)} km)',
+        '${eta.toStringAsFixed(0)} min away (${km.toStringAsFixed(1)} km)',
         '${d.rating.toStringAsFixed(1)}★ rating',
         if (exactMatch)
           '${d.vehicle.type.label} matches request'
@@ -48,7 +50,7 @@ class DispatchEngine {
       return DispatchCandidate(
         driver: d,
         score: score.toDouble(),
-        distanceToPickup: dist,
+        distanceKm: km,
         etaMinutes: eta,
         reasons: reasons,
       );

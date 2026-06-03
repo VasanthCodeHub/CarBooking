@@ -47,11 +47,10 @@ class _Detail extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final fleet = ref.watch(fleetProvider).valueOrNull ?? const <Driver>[];
     final driver = booking.driverId == null
         ? null
-        : ref
-            .read(driverRepositoryProvider)
-            .current
+        : fleet
             .cast<Driver?>()
             .firstWhere((d) => d!.id == booking.driverId, orElse: () => null);
 

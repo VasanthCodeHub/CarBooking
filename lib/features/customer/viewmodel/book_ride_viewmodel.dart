@@ -110,13 +110,6 @@ class BookRideViewModel extends AutoDisposeNotifier<BookRideState> {
 
   void setScheduledAt(DateTime dt) => state = state.copyWith(scheduledAt: dt);
 
-  /// Live preview of which driver the engine would pick — shown before booking.
-  DispatchResult? previewMatch() {
-    if (!state.hasRoute) return null;
-    final draft = _draft('preview');
-    return ref.read(bookingRepositoryProvider).previewDispatch(draft);
-  }
-
   Future<DispatchResult?> submit() async {
     if (!state.hasRoute) {
       state = state.copyWith(error: 'Choose a pickup and drop-off first.');

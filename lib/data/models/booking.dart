@@ -1,6 +1,5 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../core/theme/app_colors.dart';
 import 'vehicle.dart';
@@ -45,25 +44,29 @@ enum BookingStatus {
   bool get isLive => isActive || this == BookingStatus.pending;
 }
 
-/// A named location on the mock map (normalized 0..1 coordinates).
+/// A named location with real-world coordinates.
 class Place {
   final String label;
   final String address;
-  final Offset position;
+  final LatLng position;
 
   const Place({required this.label, required this.address, required this.position});
 
   factory Place.fromJson(Map<String, dynamic> json) => Place(
         label: json['label'] as String,
         address: json['address'] as String,
-        position: Offset(
-          (json['x'] as num).toDouble(),
-          (json['y'] as num).toDouble(),
+        position: LatLng(
+          (json['lat'] as num).toDouble(),
+          (json['lng'] as num).toDouble(),
         ),
       );
 
-  Map<String, dynamic> toJson() =>
-      {'label': label, 'address': address, 'x': position.dx, 'y': position.dy};
+  Map<String, dynamic> toJson() => {
+        'label': label,
+        'address': address,
+        'lat': position.latitude,
+        'lng': position.longitude,
+      };
 }
 
 /// A reservation / ride request.

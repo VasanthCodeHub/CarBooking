@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/location_picker_screen.dart';
 import '../../../core/widgets/mock_map.dart';
-import '../../../data/mock/mock_data.dart';
 import '../../../data/models/booking.dart';
-import '../../../data/models/dispatch.dart';
+import '../../../data/models/driver.dart';
 import '../../../data/models/vehicle.dart';
+import '../../../data/providers.dart';
 import '../viewmodel/book_ride_viewmodel.dart';
 import 'widgets/dispatch_result_sheet.dart';
 
@@ -30,10 +32,20 @@ class _BookRideScreenState extends ConsumerState<BookRideScreen> {
   }
 
   Future<void> _pickPlace(bool isPickup) async {
-    final place = await showModalBottomSheet<Place>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _PlacePickerSheet(isPickup: isPickup),
+    final state = ref.read(bookRideProvider);
+    final initial = (isPickup ? state.pickup : state.dropoff)?.position ??
+        state.pickup?.position ??
+        state.dropoff?.position ??
+        const LatLng(13.0827, 80.2707); // default: Chennai, Tamil Nadu
+    final place = await Navigator.of(context).push<Place>(
+      MaterialPageRoute(
+        builder: (_) => LocationPickerScreen(
+          title: isPickup ? 'Choose pickup' : 'Choose drop-off',
+          label: isPickup ? 'Pickup' : 'Drop-off',
+          initialCenter: initial,
+          accent: isPickup ? AppColors.success : AppColors.danger,
+        ),
+      ),
     );
     if (place == null) return;
     final vm = ref.read(bookRideProvider.notifier);
@@ -77,7 +89,7 @@ class _BookRideScreenState extends ConsumerState<BookRideScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(bookRideProvider);
-    final preview = state.hasRoute ? ref.read(bookRideProvider.notifier).previewMatch() : null;
+    final fleet = ref.watch(fleetProvider).valueOrNull ?? const [];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Reserve a ride')),
@@ -88,12 +100,9 @@ class _BookRideScreenState extends ConsumerState<BookRideScreen> {
             height: 200,
             pickup: state.pickup?.position,
             dropoff: state.dropoff?.position,
-            drivers: MockData.drivers
-                .where((d) => d.status.name == 'available')
-                .map((d) => MapDriver(
-                      position: d.position,
-                      highlighted: d.id == preview?.winner?.driver.id,
-                    ))
+            drivers: fleet
+                .where((d) => d.status == DriverStatus.available)
+                .map((d) => MapDriver(position: d.position))
                 .toList(),
           ),
           const SizedBox(height: 18),
@@ -170,7 +179,7 @@ class _BookRideScreenState extends ConsumerState<BookRideScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          if (state.hasRoute) _FareSummary(state: state, preview: preview),
+          if (state.hasRoute) _FareSummary(state: state),
         ],
       ),
       bottomNavigationBar: _ConfirmBar(
@@ -450,13 +459,11 @@ class _PassengersRow extends StatelessWidget {
 }
 
 class _FareSummary extends StatelessWidget {
-  const _FareSummary({required this.state, required this.preview});
+  const _FareSummary({required this.state});
   final BookRideState state;
-  final DispatchResult? preview;
 
   @override
   Widget build(BuildContext context) {
-    final winner = preview?.winner;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -470,29 +477,6 @@ class _FareSummary extends StatelessWidget {
           _row('Est. trip time', Fmt.minutes(state.etaMinutes)),
           _row('Vehicle', state.vehicleType.label),
           const Divider(height: 22),
-          if (winner != null)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.success.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.bolt_rounded, color: AppColors.success, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Auto-dispatch ready: ${winner.driver.name.split(' ').first} '
-                      '· ${winner.etaMinutes.round()} min away',
-                      style: const TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 8),
           Row(
             children: [
               const Text('Total fare',
@@ -569,55 +553,3 @@ class _ConfirmBar extends StatelessWidget {
   }
 }
 
-class _PlacePickerSheet extends StatelessWidget {
-  const _PlacePickerSheet({required this.isPickup});
-  final bool isPickup;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                height: 4,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.line,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(isPickup ? 'Choose pickup' : 'Choose drop-off',
-                style: const TextStyle(
-                    fontWeight: FontWeight.w800, fontSize: 18)),
-            const SizedBox(height: 12),
-            ...MockData.savedPlaces.map(
-              (p) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.place_rounded,
-                      color: AppColors.primary, size: 18),
-                ),
-                title: Text(p.label,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(p.address),
-                onTap: () => Navigator.pop(context, p),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

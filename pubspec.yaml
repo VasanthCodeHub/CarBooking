@@ -45,8 +45,13 @@ dependencies:
   intl: ^0.19.0
   # Lightweight entrance animations for a "cool" UI
   flutter_animate: ^4.5.0
-  # HTTP client — ready for the Python API later
+  # HTTP client — talks to the Spring Boot API
   dio: ^5.7.0
+  # Free, no-API-key maps (OpenStreetMap tiles) + coordinates
+  flutter_map: ^7.0.0
+  latlong2: ^0.9.1
+  # Device GPS for the "my location" button in the map picker
+  geolocator: ^13.0.2
 
 dev_dependencies:
   flutter_test:
