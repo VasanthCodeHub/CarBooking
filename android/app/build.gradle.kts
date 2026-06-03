@@ -33,19 +33,19 @@ android {
             dimension = "role"
             applicationIdSuffix = ".customer"
             versionNameSuffix = "-customer"
-            resValue("string", "app_name", "RideReserve Customer")
+            resValue("string", "app_name", "Customer")
         }
         create("driver") {
             dimension = "role"
             applicationIdSuffix = ".driver"
             versionNameSuffix = "-driver"
-            resValue("string", "app_name", "RideReserve Driver")
+            resValue("string", "app_name", "Driver")
         }
         create("admin") {
             dimension = "role"
             applicationIdSuffix = ".admin"
             versionNameSuffix = "-admin"
-            resValue("string", "app_name", "RideReserve Admin")
+            resValue("string", "app_name", "Admin")
         }
     }
 

@@ -13,7 +13,7 @@ class BookingApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     final role = ref.watch(appRoleProvider);
     return MaterialApp.router(
-      title: 'RideReserve ${role.label}',
+      title: role.label,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,
