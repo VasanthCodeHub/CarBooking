@@ -4,11 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/models/user_role.dart';
+import '../../../data/flavor_provider.dart';
 import '../viewmodel/auth_viewmodel.dart';
 
-/// Login with a role picker. The selected role decides which experience the
-/// user lands in; the router handles the redirect once auth state changes.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -20,7 +18,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  UserRole _role = UserRole.customer;
   bool _obscure = true;
 
   @override
@@ -31,7 +28,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _useDemoAccount() {
-    _emailController.text = '${_role.name}@demo.com';
+    final role = ref.read(appRoleProvider);
+    _emailController.text = '${role.name}@demo.com';
     _passwordController.text = 'demo1234';
     setState(() {});
   }
@@ -39,17 +37,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
+    final role = ref.read(appRoleProvider);
     await ref.read(authViewModelProvider.notifier).login(
           email: _emailController.text,
           password: _passwordController.text,
-          role: _role,
+          role: role,
         );
-    // Router redirects on success. Surface errors inline.
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authViewModelProvider);
+    final role = ref.watch(appRoleProvider);
 
     ref.listen(authViewModelProvider, (prev, next) {
       if (next.error != null && next.error != prev?.error) {
@@ -71,18 +70,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              _Header(role: _role),
-              const SizedBox(height: 28),
-              Text('I am a', style: context.muted),
-              const SizedBox(height: 10),
-              _RolePicker(
-                selected: _role,
-                onChanged: (r) {
-                  setState(() => _role = r);
-                  ref.read(authViewModelProvider.notifier).clearError();
-                },
-              ),
-              const SizedBox(height: 28),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 56,
+                    width: 56,
+                    decoration: BoxDecoration(
+                      gradient: role.gradient,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child:
+                        const Icon(Icons.local_taxi_rounded, color: Colors.white, size: 30),
+                  ),
+                  const SizedBox(height: 18),
+                  Text('Welcome back', style: context.h1),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Sign in to continue as ${role.label}.',
+                    style: context.muted,
+                  ),
+                ],
+              ).animate().fadeIn().slideY(begin: 0.15, end: 0, duration: 400.ms),
+              const SizedBox(height: 36),
               Form(
                 key: _formKey,
                 child: Column(
@@ -122,9 +132,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
-                      validator: (v) => (v == null || v.isEmpty)
-                          ? 'Password is required'
-                          : null,
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'Password is required' : null,
                     ),
                     Align(
                       alignment: Alignment.centerRight,
@@ -139,7 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: ElevatedButton(
                         onPressed: auth.isLoading ? null : _submit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _role.color,
+                          backgroundColor: role.color,
                         ),
                         child: auth.isLoading
                             ? const SizedBox(
@@ -150,7 +159,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   color: Colors.white,
                                 ),
                               )
-                            : Text('Sign in as ${_role.label}'),
+                            : Text('Sign in as ${role.label}'),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -158,7 +167,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: TextButton.icon(
                         onPressed: _useDemoAccount,
                         icon: const Icon(Icons.bolt_rounded, size: 18),
-                        label: Text('Use ${_role.label} demo account'),
+                        label: Text('Use ${role.label} demo account'),
                       ),
                     ),
                   ],
@@ -166,104 +175,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.role});
-  final UserRole role;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          height: 56,
-          width: 56,
-          decoration: BoxDecoration(
-            gradient: role.gradient,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: const Icon(Icons.local_taxi_rounded, color: Colors.white, size: 30),
-        ),
-        const SizedBox(height: 18),
-        Text('Welcome back', style: context.h1),
-        const SizedBox(height: 6),
-        Text(
-          'Sign in to continue with RideReserve.',
-          style: context.muted,
-        ),
-      ],
-    ).animate().fadeIn().slideY(begin: 0.15, end: 0, duration: 400.ms);
-  }
-}
-
-class _RolePicker extends StatelessWidget {
-  const _RolePicker({required this.selected, required this.onChanged});
-  final UserRole selected;
-  final ValueChanged<UserRole> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (final role in UserRole.values) ...[
-          Expanded(child: _RoleCard(role: role, selected: role == selected, onTap: () => onChanged(role))),
-          if (role != UserRole.values.last) const SizedBox(width: 10),
-        ],
-      ],
-    );
-  }
-}
-
-class _RoleCard extends StatelessWidget {
-  const _RoleCard({required this.role, required this.selected, required this.onTap});
-  final UserRole role;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        decoration: BoxDecoration(
-          gradient: selected ? role.gradient : null,
-          color: selected ? null : AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected ? Colors.transparent : AppColors.line,
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: role.color.withValues(alpha: 0.35),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          children: [
-            Icon(role.icon,
-                color: selected ? Colors.white : AppColors.inkSoft, size: 26),
-            const SizedBox(height: 8),
-            Text(
-              role.label,
-              style: TextStyle(
-                color: selected ? Colors.white : AppColors.ink,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ],
         ),
       ),
     );
