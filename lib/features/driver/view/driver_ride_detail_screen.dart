@@ -93,9 +93,6 @@ class _Body extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    _circleBtn(Icons.call_rounded),
-                    const SizedBox(width: 8),
-                    _circleBtn(Icons.message_rounded),
                   ],
                 ),
               ),
@@ -148,15 +145,6 @@ class _Body extends ConsumerWidget {
       ],
     );
   }
-
-  Widget _circleBtn(IconData icon) => Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.driver.withValues(alpha: 0.12),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, color: AppColors.driver, size: 18),
-      );
 
   Widget _routeCard() {
     return Container(

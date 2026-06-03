@@ -35,7 +35,12 @@ class ApiDriverRepository implements DriverRepository {
 
   @override
   Future<Driver> setStatus(String id, DriverStatus status) async {
-    // Driver availability is managed server-side by the dispatch engine.
-    throw UnimplementedError('Driver status is managed by the backend');
+    // The driver app only toggles online (available) / offline; on-trip is
+    // managed server-side by the dispatch engine.
+    final res = await _dio.patch(
+      '/driver/$id/availability',
+      data: {'online': status == DriverStatus.available},
+    );
+    return Driver.fromJson(res.data as Map<String, dynamic>);
   }
 }

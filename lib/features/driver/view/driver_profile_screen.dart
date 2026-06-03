@@ -82,11 +82,6 @@ class DriverProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
           ],
-          _tile(Icons.directions_car_rounded, 'Vehicle & documents'),
-          _tile(Icons.shield_outlined, 'Insurance'),
-          _tile(Icons.star_outline_rounded, 'Ratings & reviews'),
-          _tile(Icons.help_outline_rounded, 'Help & support'),
-          const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () => ref.read(authViewModelProvider.notifier).logout(),
             icon: const Icon(Icons.logout_rounded, color: AppColors.danger),
@@ -169,28 +164,4 @@ class DriverProfileScreen extends ConsumerWidget {
         ),
       );
 
-  Widget _tile(IconData icon, String title) => Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.line),
-        ),
-        child: ListTile(
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.driver.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: AppColors.driver, size: 20),
-          ),
-          title: Text(title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5)),
-          trailing:
-              const Icon(Icons.chevron_right_rounded, color: AppColors.inkSoft),
-          onTap: () {},
-        ),
-      );
 }

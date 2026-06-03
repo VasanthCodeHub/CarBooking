@@ -60,20 +60,33 @@ class ApiBookingRepository implements BookingRepository {
     return Booking.fromJson(res.data as Map<String, dynamic>);
   }
 
-  // ── Not used by the customer app (driver/admin endpoints come later) ──────
   @override
-  Future<List<Booking>> getAll() => throw UnimplementedError();
+  Future<List<Booking>> forDriver(String driverId) async {
+    final res = await _dio.get(
+      '/driver/bookings',
+      queryParameters: {'driverId': driverId},
+    );
+    return (res.data as List)
+        .map((e) => Booking.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
 
   @override
-  Future<List<Booking>> forDriver(String driverId) => throw UnimplementedError();
+  Future<Booking> advanceStatus(String bookingId, BookingStatus status) async {
+    final res = await _dio.patch(
+      '/driver/bookings/$bookingId/status',
+      data: {'status': status.name},
+    );
+    return Booking.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  // ── Admin-only operations (endpoints come later) ──────────────────────────
+  @override
+  Future<List<Booking>> getAll() => throw UnimplementedError();
 
   @override
   Future<DispatchResult> redispatch(String bookingId) => throw UnimplementedError();
 
   @override
   DispatchResult previewDispatch(Booking booking) => throw UnimplementedError();
-
-  @override
-  Future<Booking> advanceStatus(String bookingId, BookingStatus status) =>
-      throw UnimplementedError();
 }

@@ -294,9 +294,8 @@ class _ActiveRideCard extends StatelessWidget {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    _miniBtn(Icons.call_rounded, 'Call'),
-                    const SizedBox(width: 10),
-                    _miniBtn(Icons.navigation_rounded, 'Navigate'),
+                    const Text('Trip fare',
+                        style: TextStyle(color: AppColors.inkSoft, fontSize: 13)),
                     const Spacer(),
                     Text(Fmt.money(booking.fare),
                         style: const TextStyle(
@@ -323,22 +322,6 @@ class _ActiveRideCard extends StatelessWidget {
     );
   }
 
-  Widget _miniBtn(IconData icon, String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceAlt,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: AppColors.driver),
-            const SizedBox(width: 6),
-            Text(label,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 12.5)),
-          ],
-        ),
-      );
 }
 
 class _EmptyAssigned extends StatelessWidget {
