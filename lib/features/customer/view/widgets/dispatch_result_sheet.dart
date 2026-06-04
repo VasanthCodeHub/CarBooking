@@ -29,11 +29,19 @@ class _DispatchResultSheetState extends State<DispatchResultSheet> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          child: _scanning ? const _Scanning() : _Result(result: widget.result),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            alignment: Alignment.topCenter,
+            child: _scanning
+                ? const _Scanning()
+                : _Result(result: widget.result),
+          ),
         ),
       ),
     );

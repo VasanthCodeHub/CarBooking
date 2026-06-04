@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -60,13 +62,22 @@ class RideAction {
       };
 }
 
+/// How often we re-check the backend for incoming/assigned rides. Polling only
+/// runs while the driver is online and stops the moment they go offline.
+const _pollInterval = Duration(seconds: 5);
+
 class DriverViewModel extends AsyncNotifier<DriverData> {
+  Timer? _pollTimer;
+
   String? get _driverId => ref.read(authViewModelProvider).user?.driverId;
 
   @override
   Future<DriverData> build() async {
+    ref.onDispose(_stopPolling);
     ref.watch(authViewModelProvider);
-    return _load();
+    final data = await _load();
+    _syncPolling(data);
+    return data;
   }
 
   Future<DriverData> _load() async {
@@ -79,6 +90,8 @@ class DriverViewModel extends AsyncNotifier<DriverData> {
 
   Future<void> refresh() async {
     state = await AsyncValue.guard(_load);
+    final data = state.valueOrNull;
+    if (data != null) _syncPolling(data);
   }
 
   Future<void> toggleOnline() async {
@@ -94,6 +107,39 @@ class DriverViewModel extends AsyncNotifier<DriverData> {
   Future<void> advance(String bookingId, BookingStatus next) async {
     await ref.read(bookingRepositoryProvider).advanceStatus(bookingId, next);
     await refresh();
+  }
+
+  /// Polls while the driver is online (available or on a trip) so newly
+  /// dispatched rides appear without a manual refresh; stops when offline.
+  void _syncPolling(DriverData data) {
+    final online =
+        data.driver != null && data.driver!.status != DriverStatus.offline;
+    if (online) {
+      _pollTimer ??= Timer.periodic(_pollInterval, (_) => _poll());
+    } else {
+      _stopPolling();
+    }
+  }
+
+  /// Silent refresh: refetch and swap the data in without flipping to a loading
+  /// state, so the dashboard just rebuilds with any new assigned rides.
+  Future<void> _poll() async {
+    if (_driverId == null) {
+      _stopPolling();
+      return;
+    }
+    try {
+      final data = await _load();
+      state = AsyncData(data);
+      _syncPolling(data);
+    } catch (_) {
+      // Keep the last good data and try again on the next tick.
+    }
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
   }
 }
 

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -33,15 +36,74 @@ class LocationPickerScreen extends StatefulWidget {
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
   final MapController _map = MapController();
+  final Dio _geocoder = Dio();
   late LatLng _center = widget.initialCenter;
   bool _locating = false;
+
+  // Live reverse-geocoded place under the center pin.
+  String? _placeName;
+  String? _placeAddress;
+  bool _resolving = false;
+  Timer? _debounce;
+  int _geoSeq = 0; // guards against out-of-order responses
 
   @override
   void initState() {
     super.initState();
     // Ask for location permission as soon as the map opens; if granted,
     // center on the user. Deferred so the map is laid out before we move it.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _useMyLocation());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _useMyLocation();
+      _resolveCenter();
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  /// Debounced reverse geocode whenever the map settles on a new center.
+  void _onCenterChanged(LatLng center) {
+    _center = center;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 600), _resolveCenter);
+  }
+
+  /// Looks up a human-readable place name + address for the current center
+  /// using OpenStreetMap's free Nominatim reverse-geocoding service.
+  Future<void> _resolveCenter() async {
+    final seq = ++_geoSeq;
+    final target = _center;
+    setState(() => _resolving = true);
+    try {
+      final res = await _geocoder.get(
+        'https://nominatim.openstreetmap.org/reverse',
+        queryParameters: {
+          'format': 'jsonv2',
+          'lat': target.latitude,
+          'lon': target.longitude,
+          'zoom': 18,
+          'addressdetails': 1,
+        },
+        options: Options(headers: {'User-Agent': 'com.example.booking (demo)'}),
+      );
+      if (seq != _geoSeq || !mounted) return; // a newer request superseded us
+      final data = res.data as Map<String, dynamic>;
+      final display = (data['display_name'] as String?)?.trim();
+      final name = (data['name'] as String?)?.trim();
+      setState(() {
+        _placeName = (name != null && name.isNotEmpty)
+            ? name
+            : display?.split(',').first.trim();
+        _placeAddress = display;
+        _resolving = false;
+      });
+    } catch (_) {
+      if (seq != _geoSeq || !mounted) return;
+      setState(() => _resolving = false);
+    }
   }
 
   Future<void> _useMyLocation() async {
@@ -72,6 +134,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       final here = LatLng(pos.latitude, pos.longitude);
       _map.move(here, 15);
       setState(() => _center = here);
+      _resolveCenter();
     } catch (_) {
       // Ignore — the user can still pick manually.
     } finally {
@@ -79,11 +142,16 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
+  String get _coords =>
+      '${_center.latitude.toStringAsFixed(5)}, ${_center.longitude.toStringAsFixed(5)}';
+
   void _confirm() {
     final place = Place(
-      label: widget.label,
-      address:
-          '${_center.latitude.toStringAsFixed(5)}, ${_center.longitude.toStringAsFixed(5)}',
+      // Show the real selected place, not the generic "Pickup"/"Drop-off" tag.
+      label: (_placeName != null && _placeName!.isNotEmpty)
+          ? _placeName!
+          : 'Pinned location',
+      address: _placeAddress ?? _coords,
       position: _center,
     );
     Navigator.pop(context, place);
@@ -103,7 +171,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               initialZoom: 14,
               minZoom: 4,
               maxZoom: 18,
-              onPositionChanged: (camera, _) => _center = camera.center,
+              onPositionChanged: (camera, _) => _onCenterChanged(camera.center),
             ),
             children: [
               TileLayer(
@@ -145,15 +213,88 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           color: AppColors.surface,
           border: Border(top: BorderSide(color: AppColors.line)),
         ),
-        child: SizedBox(
-          height: 54,
-          child: ElevatedButton.icon(
-            onPressed: _confirm,
-            style: ElevatedButton.styleFrom(backgroundColor: widget.accent),
-            icon: const Icon(Icons.check_rounded),
-            label: Text('Set ${widget.label.toLowerCase()} here'),
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _AddressPreview(
+              accent: widget.accent,
+              resolving: _resolving,
+              name: _placeName,
+              address: _placeAddress ?? _coords,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: _confirm,
+                style: ElevatedButton.styleFrom(backgroundColor: widget.accent),
+                icon: const Icon(Icons.check_rounded),
+                label: Text('Set ${widget.label.toLowerCase()} here'),
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+/// The address card under the confirm button showing what the center pin is
+/// currently sitting on while reverse geocoding resolves.
+class _AddressPreview extends StatelessWidget {
+  const _AddressPreview({
+    required this.accent,
+    required this.resolving,
+    required this.name,
+    required this.address,
+  });
+
+  final Color accent;
+  final bool resolving;
+  final String? name;
+  final String address;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.place_rounded, color: accent, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  resolving
+                      ? 'Locating…'
+                      : (name != null && name!.isNotEmpty
+                          ? name!
+                          : 'Pinned location'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 14.5),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  address,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.inkSoft, fontSize: 12.5),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

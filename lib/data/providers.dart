@@ -10,7 +10,7 @@ import 'repositories/driver_repository.dart';
 /// in the feature layer changes.
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return MockAuthRepository();
+  return StaticAuthRepository();
 });
 
 final driverRepositoryProvider = Provider<DriverRepository>((ref) {

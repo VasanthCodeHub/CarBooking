@@ -1,9 +1,9 @@
-import '../mock/mock_data.dart';
 import '../models/app_user.dart';
 import '../models/user_role.dart';
+import '../static_accounts.dart';
 
-/// Abstraction over authentication. The mock implementation backs the POC;
-/// swap in an `ApiAuthRepository` (Dio -> Python) without touching the UI.
+/// Abstraction over authentication. The static implementation backs the demo;
+/// swap in an `ApiAuthRepository` (Dio -> Spring Boot) without touching the UI.
 abstract class AuthRepository {
   Future<AppUser> login({
     required String email,
@@ -14,52 +14,39 @@ abstract class AuthRepository {
   Future<void> logout();
 }
 
-class MockAuthRepository implements AuthRepository {
+/// Authenticates against the fixed [kStaticAccounts] list — there is no
+/// sign-up yet. Email + password must match a known account for the role.
+class StaticAuthRepository implements AuthRepository {
   @override
   Future<AppUser> login({
     required String email,
     required String password,
     required UserRole role,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 700));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (email.trim().isEmpty || password.isEmpty) {
       throw const AuthException('Please enter your email and password.');
     }
 
-    // In the POC the chosen role wins. We try to match a seeded demo account
-    // for that role so the screens show a real name/profile.
-    final match = MockData.users.where((u) => u.role == role).cast<AppUser?>().firstWhere(
-          (u) => u!.email.toLowerCase() == email.trim().toLowerCase(),
+    final normalized = email.trim().toLowerCase();
+    final account = staticAccountsForRole(role).cast<StaticAccount?>().firstWhere(
+          (a) => a!.user.email.toLowerCase() == normalized,
           orElse: () => null,
         );
-    if (match != null) return match;
 
-    final template = MockData.users.firstWhere((u) => u.role == role);
-    final name = _nameFromEmail(email);
-    return AppUser(
-      id: 'u_${role.name}_${email.hashCode.abs()}',
-      name: name,
-      email: email.trim(),
-      phone: template.phone,
-      role: role,
-      driverId: role == UserRole.driver ? template.driverId : null,
-    );
+    if (account == null) {
+      throw AuthException('No ${role.label.toLowerCase()} account found for that email.');
+    }
+    if (account.password != password) {
+      throw const AuthException('Incorrect password. Try again.');
+    }
+    return account.user;
   }
 
   @override
   Future<void> logout() async =>
       Future.delayed(const Duration(milliseconds: 200));
-
-  String _nameFromEmail(String email) {
-    final local = email.split('@').first.replaceAll(RegExp(r'[._]'), ' ').trim();
-    if (local.isEmpty) return 'Guest User';
-    return local
-        .split(' ')
-        .where((w) => w.isNotEmpty)
-        .map((w) => w[0].toUpperCase() + w.substring(1))
-        .join(' ');
-  }
 }
 
 class AuthException implements Exception {

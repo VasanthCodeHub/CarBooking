@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/flavor_provider.dart';
+import '../../../data/static_accounts.dart';
 import '../viewmodel/auth_viewmodel.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -27,11 +28,55 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  void _useDemoAccount() {
+  Future<void> _pickDemoAccount() async {
+    FocusScope.of(context).unfocus();
     final role = ref.read(appRoleProvider);
-    _emailController.text = '${role.name}@demo.com';
-    _passwordController.text = 'demo1234';
+    final accounts = staticAccountsForRole(role);
+
+    final picked = await showModalBottomSheet<StaticAccount>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.bolt_rounded, color: role.color, size: 20),
+                    const SizedBox(width: 8),
+                    Text('Demo ${role.label.toLowerCase()} accounts',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 16)),
+                  ],
+                ),
+              ),
+              for (final a in accounts)
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: role.color.withValues(alpha: 0.15),
+                    child: Text(a.user.initials,
+                        style: TextStyle(
+                            color: role.color, fontWeight: FontWeight.w700)),
+                  ),
+                  title: Text(a.user.name),
+                  subtitle: Text(a.user.email),
+                  onTap: () => Navigator.pop(context, a),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (picked == null) return;
+    _emailController.text = picked.user.email;
+    _passwordController.text = picked.password;
     setState(() {});
+    await _submit();
   }
 
   Future<void> _submit() async {
@@ -165,9 +210,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 14),
                     Center(
                       child: TextButton.icon(
-                        onPressed: _useDemoAccount,
+                        onPressed: auth.isLoading ? null : _pickDemoAccount,
                         icon: const Icon(Icons.bolt_rounded, size: 18),
-                        label: Text('Use ${role.label} demo account'),
+                        label: Text('Use a ${role.label.toLowerCase()} demo account'),
                       ),
                     ),
                   ],

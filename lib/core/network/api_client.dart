@@ -4,25 +4,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Base URL of the Spring Boot backend (port 8085, `/api` prefix).
 ///
-/// Pick the host that matches where you run the app:
-///   - Physical device  -> your PC's LAN IP (phone must be on the SAME Wi-Fi)
-///   - Android emulator -> 10.0.2.2
-///   - Web / desktop    -> localhost
-// const String _lanHost = '192.168.13.62'; // <-- physical device (this PC's LAN IP)
-const String _lanHost = '10.0.2.2';          // <-- Android emulator
+/// We tunnel the local backend through ngrok so any device (physical phone on
+/// mobile data, emulator, web) can reach it over HTTPS — no LAN/IP juggling.
+/// When the ngrok tunnel restarts it gets a NEW url; paste it here.
+const String _ngrokUrl = 'https://district-body-stumbling.ngrok-free.dev';
 
-String get apiBaseUrl {
-  if (kIsWeb) return 'http://localhost:8085/api';
-  return 'http://$_lanHost:8085/api';
-}
+// ── Local fallbacks (uncomment ONE if you stop using ngrok) ───────────────
+//   - Android emulator -> http://10.0.2.2:8085
+//   - Physical device over USB -> http://localhost:8085 (+ `adb reverse tcp:8085 tcp:8085`)
+//   - Web / desktop -> http://localhost:8085
+
+String get apiBaseUrl => '$_ngrokUrl/api';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
       baseUrl: apiBaseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: {'Content-Type': 'application/json'},
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+      headers: {
+        'Content-Type': 'application/json',
+        // Skip ngrok's free-tier browser interstitial so we get raw JSON.
+        'ngrok-skip-browser-warning': 'true',
+      },
     ),
   );
 

@@ -80,6 +80,11 @@ class _BookRideScreenState extends ConsumerState<BookRideScreen> {
       isScrollControlled: true,
       isDismissible: false,
       enableDrag: false,
+      useSafeArea: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (_) => DispatchResultSheet(result: result),
     );
     if (!mounted) return;
